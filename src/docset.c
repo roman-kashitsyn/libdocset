@@ -29,7 +29,7 @@ static const char ZDASH_NAME_LIKE_QUERY[] =
     "select t.ztokenname as name "
     ", tt.ztypename as type "
     ", null as parent "
-    ", tf.zpath || '#' || tm.zanchor as path "
+    ", coalesce(tf.zpath || '#' || tm.zanchor, tf.zpath) as path "
     "from ztoken t "
     "join ztokentype tt on (t.ztokentype=tt.z_pk) "
     "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "
@@ -90,13 +90,17 @@ DocSet * docset_open(const char *basedir)
     if (!index_path)
         goto free_docset;
 
-    sprintf(index_path, "%s%s", basedir, index_path);
+    sprintf(index_path, "%s%s", basedir, INDEX_FILE_PATH);
 
-    if (sqlite3_open(index_path, &docset->db) != SQLITE_OK)
+    if (sqlite3_open(index_path, &docset->db) != SQLITE_OK) {
+        fprintf(stderr, "Can't open database at %s\n", index_path);
         goto close_db;
+    }
 
-    if (!set_kind(docset))
+    if (!set_kind(docset)) {
+        fprintf(stderr, "Unable to set kind for db at %s\n", index_path);
         goto close_db;
+    }
 
     free(index_path);
 
@@ -119,6 +123,18 @@ int docset_close(DocSet *docset)
     int rc = sqlite3_close(docset->db);
     free(docset);
     return rc;
+}
+
+const char * docset_kind_name(DocSetKind k)
+{
+    switch (k) {
+    case DOCSET_KIND_DASH:
+        return "DASH";
+    case DOCSET_KIND_ZDASH:
+        return "ZDASH";
+    default:
+        return "UNKNOWN";
+    }
 }
 
 DocSetKind docset_kind(const DocSet *docset)
@@ -172,6 +188,8 @@ DocSetSearch * docset_search(DocSet * docset, const char * input)
         search_dispose(s);
         return NULL;
     }
+    sqlite3_bind_text(stmt, 1, input, -1, SQLITE_TRANSIENT);
+
     s->vptr = &simple_search_vtbl;
     s->docset = docset;
     s->input = input;
@@ -190,14 +208,41 @@ int docset_search_has_more(DocSetSearch * search)
     return search && search->has_more;
 }
 
+int docset_search_advance(DocSetSearch * search)
+{
+    return search && search->vptr->advance(search);
+}
+
+const char * docset_search_entry_name(DocSetSearch * search)
+{
+    return sqlite3_column_text(search->stmt, 0);
+}
+
+const char * docset_search_entry_type_name(DocSetSearch * search)
+{
+    return sqlite3_column_text(search->stmt, 1);
+}
+
+const char * docset_search_entry_canonical_type(DocSetSearch * search)
+{
+    const char * native_type = docset_search_entry_type_name(search);
+    DocSetEntryType type = docset_type_by_name(native_type);
+    return docset_canonical_type_name(type);
+}
+
+const char * docset_search_entry_path(DocSetSearch * search)
+{
+    return sqlite3_column_text(search->stmt, 3);
+}
+
 static int set_kind(DocSet * docset)
 {
-    if (count_tables(docset->db, "searchIndex") > 0) {
+    if (count_tables(docset->db, "searchIndex")) {
         docset->kind = DOCSET_KIND_DASH;
         return 1;
     }
 
-    if (count_tables(docset->db, "ztoken") > 0) {
+    if (count_tables(docset->db, "ZTOKEN")) {
         docset->kind = DOCSET_KIND_ZDASH;
         return 1;
     }
@@ -214,10 +259,10 @@ static int count_tables(sqlite3 *db, const char *table)
                            sizeof(TABLE_COUNT_QUERY),
                            &stmt, NULL) == SQLITE_OK) {
 
-        sqlite3_bind_text(stmt, 1, table, -1, SQLITE_TRANSIENT);
+        sqlite3_bind_text(stmt, 1, table, -1, SQLITE_STATIC);
 
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            result = sqlite3_column_int(stmt, 1);
+            result = sqlite3_column_int(stmt, 0);
         }
     }
     sqlite3_finalize(stmt);
