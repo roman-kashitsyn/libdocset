@@ -213,10 +213,10 @@ DocSetEntryType docset_type_by_name(const char *name)
      * simpler than to use bsearch from the standard library. */
     int l = 0, h = sizeof(TYPE_NAME_TO_ID) / sizeof(TYPE_NAME_TO_ID[0]);
     while (l < h) {
-        int m = (h + l) / 2; // We know that upper bound, no int overflow here.
-        int i = strcmp(name, TYPE_NAME_TO_ID[m].type_name);
-        if (i == 0) return TYPE_NAME_TO_ID[m].type;
-        if (i < 0) h = m;
+        int m = (h + l) / 2; /* We know that upper bound, no int overflow here. */
+        int cmp = strcmp(name, TYPE_NAME_TO_ID[m].type_name);
+        if (cmp == 0) return TYPE_NAME_TO_ID[m].type;
+        if (cmp < 0) h = m;
         else l = m + 1;
     }
     return DOCSET_TYPE_UNKNOWN;

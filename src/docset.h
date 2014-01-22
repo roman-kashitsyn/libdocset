@@ -1,16 +1,23 @@
 /**
  * @file
  *
- * This provides a docsets reading and searching library.
+ * This provides a documentation sets (used by the Dash application)
+ * reading and searching library.
  *
- * Some details regarding the docset structure could be found here
+ * Some details regarding the docset structure could be found at
  * http://kapeli.com/docsets
  *
  * Example:
  * @code
  *     DocSet *docset = docset_open("C.docset");
- *     if (!docset) report_error();
- *     printf("%s", docset_name(docset));
+ *     DocSetCursor * c = docset_find(docset, "printf");
+ *     DocSetEntry * e;
+ *     while (docset_cursor_step(c)) {
+ *         e = docset_cursor_entry(c);
+ *         printf("%s: %s\n",
+ *                docset_entry_name(e),
+ *                docset_entry_path(e));
+ *     }
  * @endcode
  */
 #ifndef DOCSET_H
@@ -21,7 +28,7 @@ extern "C" {
 #endif
 
 /**
- * An enum for all known docset kinds.
+ * @brief An enum for all known docset kinds.
  */
 typedef enum {
     DOCSET_KIND_DASH,
@@ -29,7 +36,7 @@ typedef enum {
 } DocSetKind;
 
 /**
- * An enum for all known entry types.
+ * @brief An enum for all known entry types.
  */
 typedef enum {
     DOCSET_TYPE_UNKNOWN = -1,
@@ -97,24 +104,21 @@ typedef enum {
 } DocSetEntryType;
 
 /**
- * @brief Structure representing string chunk.
- */
-typedef struct {
-    const char * data;
-    unsigned size;
-} DocSetStringRef;
-
-/**
  * @brief Abstract data type representing docset.
  */
-struct DocSet;
 typedef struct DocSet DocSet;
+
+/**
+ * @brief Abstract data type describing docset entry.
+ */
+typedef struct DocSetEntry DocSetEntry;
 
 /**
  * @brief Abstract data type representing ongoing docset search.
  */
-struct DocSetSearch;
-typedef struct DocSetSearch DocSetSearch;
+typedef struct DocSetCursor DocSetCursor;
+
+typedef void (*docset_err_handler)(void *, const char *);
 
 /**
  * @brief Opens a docset for reading.
@@ -128,6 +132,14 @@ DocSet * docset_open(const char *basedir);
  * @brief Closes docset and frees all the allocated docset resources.
  */
 int docset_close(DocSet *docset);
+
+/**
+ * @brief Sets function that will be called on error with specified
+ * context.
+ */
+void docset_set_error_handler(DocSet *docset,
+                              docset_err_handler h,
+                              void * ctx);
 
 /** @defgroup meta Metadata Access
  *  @{
@@ -165,72 +177,79 @@ const char * docset_kind_name(DocSetKind kind);
 
 /** @} */
 
+
 /** @defgroup search Search API
  * @{
  */
 
 /**
- * @brief Creates in-memory index for fuzzy search if it's not created
- * yet.
- *
- * The index will be created automatically on first fuzzy search
- * request, but a separate function is still useful.
- */
-int docset_make_fuzzy_index(DocSet * docset);
-
-/**
  * @brief Starts substring search on docset.
  */
-DocSetSearch * docset_search(DocSet * docset, const char *symbol);
+DocSetCursor * docset_find(DocSet * docset, const char * input);
 
 /**
- * @brief Starts fuzzy search on docset.
+ * @brief Starts fuzzy search on a docset.
  */
-DocSetSearch * docset_search_fuzzy(DocSet * docset, const char *input);
+DocSetCursor * docset_fuzzy_find(DocSet * docset, const char * input);
 
 /**
- * @brief Disposes docset search.
+ * @brief Disposes a cursor.
  */
-int docset_dispose_search(DocSetSearch *search);
+int docset_cursor_dispose(DocSetCursor * cursor);
 
 /**
- * @brief Returns non-zero integer if search has items to process.
+ * @brief Advances the cursor to the next entry.
+ * @return non-zero if cursor points to a valid item
  */
-int docset_search_has_more(DocSetSearch * search);
+int docset_cursor_step(DocSetCursor * cursor);
+
+/**
+ * @brief Returns entry this cursor points to.
+ *
+ * @note The entry is owned by a cursor. Client MUST NOT dispose this
+ * entry.
+ */
+const DocSetEntry * docset_cursor_entry(DocSetCursor * cursor);
+
+/** @} */
+
+/** @defgroup entry Entry manipulation functions
+ *  @{ */
 
 /**
  * @brief Returns current entry name.
  */
-const char * docset_search_entry_name(DocSetSearch *search);
+const char * docset_entry_name(const DocSetEntry * entry);
 
 /**
  * @brief Returns type of the current entry.
  */
-DocSetEntryType docset_search_entry_type(DocSetSearch *search);
-
-/**
- * @brief Returns type name of the current entry.
- */
-const char * docset_search_entry_type_name(DocSetSearch *search);
-
-/**
- * @brief Returns canonical name type of current entry.
- *
- * @see docset_canonical_type_name
- */
-const char * docset_search_entry_canonical_type(DocSetSearch * search);
+DocSetEntryType docset_entry_type(const DocSetEntry * entry);
 
 /**
  * @brief Returns current entry path. The path could contain the
  * anchor symbol (#).
  */
-const char * docset_search_entry_path(DocSetSearch *search);
+const char * docset_entry_path(const DocSetEntry * entry);
+
+/**
+ * @brief Returns type name of the entry as it's recorded in the
+ * index.
+ */
+const char * docset_entry_type_name(const DocSetEntry * entry);
+
+/**
+ * @brief Returns canonical name type of entry.
+ *
+ * @see docset_canonical_type_name
+ */
+const char * docset_entry_canonical_type(const DocSetEntry * entry);
 
 /** @} */
 
+
 /** @defgroup docset_types Docset Entry Types Manipulation
- *  @{
- */
+ *  @{  */
 
 /**
  * @brief Maps symbolic type name into appropriate numerical constant.

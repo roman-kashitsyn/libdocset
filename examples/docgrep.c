@@ -3,15 +3,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void usage(const char *progname) {
+static void usage(const char *progname)
+{
     fprintf(stderr, "%s: QUERY DOCSET_PATH\n", progname);
     exit(1);
+}
+
+static void print_error(void * ctx, const char *msg)
+{
+    fprintf(stderr, "%s", msg);
 }
 
 int main(int argc, const char *argv[])
 {
     DocSet * docset;
-    DocSetSearch * search;
+    DocSetCursor * cursor;
+    const DocSetEntry * entry;
 
     if (argc != 3) {
         usage(argv[0]);
@@ -23,24 +30,26 @@ int main(int argc, const char *argv[])
         return 1;
     }
 
-    search = docset_search(docset, argv[1]);
-    if (!search) {
-        fprintf(stderr, "Unable to run a search\n");
+    docset_set_error_handler(docset, print_error, NULL);
+
+    cursor = docset_find(docset, argv[1]);
+    if (!cursor) {
+        fprintf(stderr, "Unable to create a cursor\n");
         docset_close(docset);
         return 1;
     }
 
-    while (docset_search_has_more(search)) {
+    while (docset_cursor_step(cursor)) {
+        entry = docset_cursor_entry(cursor);
         printf("%-30s (%s)[%s] at %s\n",
-               docset_search_entry_name(search),
-               docset_search_entry_type_name(search),
-               docset_search_entry_canonical_type(search),
-               docset_search_entry_path(search)
+               docset_entry_name(entry),
+               docset_entry_type_name(entry),
+               docset_entry_canonical_type(entry),
+               docset_entry_path(entry)
                );
-        docset_search_advance(search);
     }
 
-    docset_dispose_search(search);
+    docset_cursor_dispose(cursor);
     docset_close(docset);
 
     return 0;

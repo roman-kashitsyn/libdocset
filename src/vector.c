@@ -10,11 +10,12 @@ int docset_vector_init(DocSetVector * vec,
 {
     elem_type * data = calloc(capacity, sizeof(*data));
 
-    if (!data) return 1;
+    if (!data) return 0;
 
     vec->size = 0;
     vec->capacity = capacity;
     vec->data = data;
+    return 1;
 }
 
 int docset_vector_push(DocSetVector * vec,
@@ -24,6 +25,7 @@ int docset_vector_push(DocSetVector * vec,
         if (!realloc_vector(vec)) return 0;
     }
     vec->data[vec->size++] = item;
+    return 1;
 }
 
 void docset_vector_destroy(DocSetVector * vec)
