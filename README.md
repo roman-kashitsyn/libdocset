@@ -1,24 +1,52 @@
 libdocset - docset bundles reader
 =================================
 
-libdocset is a pure-C library for readind of .docset bundles used by
-Dash application for MacOS.  It allows to extract docset bundle
-meta-information and perform various queries (substring and fuzzy search).
+libdocset is a pure-C (C89-compiant) library for .docset bundles
+reading. The bundles are used by the handy
+[Dash](http://kapeli.com/dash) application for MacOS.
+
+What you can do
+---------------
+
+* Extract basic docset meta-information (name, bundle identifier,
+  platform family, is js enabled, etc).
+* Enumerate all the docset entries.
+* Perform simple queries using sql-like patterns.
+
+What you can't do (yet?)
+------------------------
+
+* Access table of contents.
+* Create docsets using this library.
 
 Example
 =======
 
     DocSet * docset = docset_open("~/.docsets/C.docset");
-    DocSetSearch * search = docset_fuzzy_find(docset, "prntf");
-    while (docset_search_has_more(search)) {
-        docset_search_advance(search);
+    DocSetCursor * cursor = docset_find(docset, "%printf");
+    while (docset_cursor_step(cursor)) {
+        DocSetEntry * e = docset_cursor_entry(cursor);
         printf("%s (%s): %s",
-               docset_search_entry_name(search),
-               docset_search_entry_type_name(search),
-               docset_search_entry_path(search));
+               docset_entry_name(cursor),
+               docset_entry_canonical_type(cursor),
+               docset_entry_path(cursor));
     }
-    docset_dispose_search(search);
+    docset_dispose_cursor(cursor);
     docset_close(docset);
+
+Please find more examples in the `/examples` directory.
+
+Building
+========
+
+Currently only [CMake](http://www.cmake.org/) builds are supported.
+You can use the following actions to build the library:
+
+    mkdir somewhere/docset-build
+    cd somwhere/docset-build
+    cmake /path/to/libdocset
+    make
+    make install
 
 Thread Safety
 =============
@@ -30,10 +58,14 @@ synchronization when accessing them from multiple threads.
 Dependencies
 ============
 
-The library depends on libsqlite3 required to read the docset index
-database.
+The library depends on following libraries:
 
+* `libsqlite3` is required to read the docset index
+  database;
+
+* `libxml2` is used to parse docset property lists.
 
 License
 =======
-The library is distributed under MIT license.
+
+The library is distributed under the MIT license.

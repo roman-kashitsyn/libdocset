@@ -21,40 +21,53 @@ void docset_sb_destroy(DocSetStringBuf *buf)
     }
 }
 
-int docset_sb_assign(DocSetStringBuf *buf, const char *data, size_t len)
+int docset_sb_assign(DocSetStringBuf *buf,
+                     const char *data,
+                     size_t len)
 {
-    size_t req_cap = len + 1;
-    if (buf->capacity < req_cap) {
-        size_t capx2 = buf->capacity * 2;
-        size_t new_cap = capx2 > req_cap ? capx2 : req_cap;
-        char * n = realloc(buf->data, new_cap);
-        if (!n) return 0;
-        buf->capacity = new_cap;
-        buf->data = n;
-    }
+    docset_sb_reserve(buf, len + 1);
     memcpy(buf->data, data, len);
     buf->data[len] = '\0';
     buf->size = len;
     return 1;
 }
-/*
-DocSetStringRef docset_sr_copy(const char *data)
+
+int docset_sb_reserve(DocSetStringBuf *buf,
+                      size_t size)
 {
-    return docset_sr_copy_n(data, strlen(data));
+    if (buf->capacity < size) {
+        size_t capx2 = buf->capacity * 2;
+        size_t new_cap = capx2 > size ? capx2 : size;
+        char * n = realloc(buf->data, new_cap);
+        if (!n) return 0;
+        buf->capacity = new_cap;
+        buf->data = n;
+    }
+    return 1;
 }
 
-DocSetStringRef docset_sr_copy_n(const char *data, unsigned size)
+char *docset_sb_new_string(DocSetStringBuf *buf)
 {
-    char * ref = malloc(size);
-    memcpy(ref, data, size);
-    return {ref, size};
+    size_t n = buf->size + 1;
+    char *copy = malloc(n);
+    if (!copy) return NULL;
+    memcpy(copy, buf->data, n);
+    return copy;
 }
 
-void docset_sr_free(DocSetStringRef *ref)
+char *docset_strdup(const char *str)
 {
-    free((void*)ref->data);
+    size_t n;
+    char *copy;
+
+    if (str == NULL) return NULL;
+
+    n = strlen(str);
+    copy = malloc(n + 1);
+
+    if (!copy) return NULL;
+
+    strcpy(copy, str);
+
+    return copy;
 }
-
-
-
-*/

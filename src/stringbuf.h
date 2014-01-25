@@ -3,31 +3,26 @@
 
 #include <stddef.h>
 
-/**
- * @brief Structure representing string chunk.
- */
-typedef struct {
-    const char * data;
-    size_t size;
-} DocSetStringRef;
-
 typedef struct {
     char * data;
     size_t size;
     size_t capacity;
 } DocSetStringBuf;
 
-int docset_sb_init(DocSetStringBuf *buf, size_t capacity);
+int  docset_sb_init(DocSetStringBuf *buf,
+                    size_t capacity);
 
 void docset_sb_destroy(DocSetStringBuf *buf);
 
-int docset_sb_assign(DocSetStringBuf *buf, const char *data, size_t len);
+int  docset_sb_assign(DocSetStringBuf *buf,
+                      const char      *data,
+                      size_t           len);
 
+int  docset_sb_reserve(DocSetStringBuf *buf,
+                       size_t len);
 
-void docset_sr_copy(DocSetStringRef *ref, const char *data);
+char *docset_sb_new_string(DocSetStringBuf *buf);
 
-void docset_sr_copy_n(DocSetStringRef *ref, const char *data, size_t len);
-
-void docset_sr_free(DocSetStringRef *ref);
+char *docset_strdup(const char *str);
 
 #endif
