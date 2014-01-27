@@ -22,19 +22,20 @@ What you can't do (yet?)
 Example
 =======
 
-    DocSet * docset = docset_open("~/.docsets/C.docset");
-    DocSetCursor * cursor = docset_find(docset, "%printf");
+    DocSet *docset = docset_open("~/.docsets/C.docset");
+    DocSetCursor *cursor = docset_find(docset, "%printf");
     while (docset_cursor_step(cursor)) {
-        DocSetEntry * e = docset_cursor_entry(cursor);
+        DocSetEntry *e = docset_cursor_entry(cursor);
         printf("%s (%s): %s",
                docset_entry_name(cursor),
                docset_entry_canonical_type(cursor),
                docset_entry_path(cursor));
     }
-    docset_dispose_cursor(cursor);
+    docset_cursor_dispose(cursor);
     docset_close(docset);
 
-Please find more examples in the `/examples` directory.
+Please find more examples in the `/examples` directory and some basic
+documentation in the `src/docset.h` header file.
 
 Building
 ========
@@ -54,6 +55,12 @@ Thread Safety
 All the library functions are reenterable. All the data structures
 used by the library are not thread-safe and require external
 synchronization when accessing them from multiple threads.
+
+Status
+======
+
+The library is in active development and is not quite ready for
+production use.
 
 Dependencies
 ============

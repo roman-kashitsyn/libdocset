@@ -9,7 +9,7 @@
 #include <string.h>
 
 #define DASH_BASE_QUERY \
-    "select name, type, null, path from searchIndex "
+    "select name, type, null as parent, path from searchIndex"
 
 #define ZDASH_BASE_QUERY     "select t.ztokenname as name "             \
     ", tt.ztypename as type "                                           \
@@ -18,7 +18,7 @@
     "from ztoken t "                                                    \
     "join ztokentype tt on (t.ztokentype=tt.z_pk) "                     \
     "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "    \
-    "join zfilepath tf on (tm.zfile=tf.z_pk) "
+    "join zfilepath tf on (tm.zfile=tf.z_pk)"
 
 #define BUF_INIT_SIZE 100
 
@@ -34,13 +34,13 @@ static const char TABLE_COUNT_QUERY[] =
 
 static const char DASH_NAME_LIKE_QUERY[] =
     DASH_BASE_QUERY
-    "where name like ? "
-    "order by name asc, type asc";
+    " where name like ?"
+    " order by name asc, type asc";
 
 static const char ZDASH_NAME_LIKE_QUERY[] =
     ZDASH_BASE_QUERY
-    "where name like ? "
-    "order by name asc, type asc";
+    " where name like ?"
+    " order by name asc, type asc";
 
 struct DocSet {
     sqlite3    *db;
@@ -69,38 +69,52 @@ struct DocSetCursor {
     sqlite3_stmt *stmt;
 };
 
-static int init_entry(DocSetEntry *e);
+static int
+init_entry(DocSetEntry *e);
 
-static void assign_buffer_col(DocSetStringBuf *buf,
-                              sqlite3_stmt    *stmt,
-                              int col);
+static void
+assign_buffer_col(DocSetStringBuf *buf,
+                  sqlite3_stmt    *stmt,
+                  int              col);
 
-static int parse_props(DocSet *docset,
-                       const char *path);
+static int
+parse_props(DocSet     *docset,
+            const char *path);
 
-static int set_kind(DocSet *);
+static int
+set_kind(DocSet *);
 
-static void report_error(DocSet *, const char *);
+static void
+report_error(DocSet     *docset,
+             const char *message);
 
-static void report_no_mem(DocSet *);
+static void
+report_no_mem(DocSet *docset);
 
-static int count_tables(sqlite3 *, const char *);
+static int
+count_tables(sqlite3    *db,
+             const char *table);
 
-static void dispose_entry(DocSetEntry *);
+static void
+dispose_entry(DocSetEntry *entry);
 
-static DocSetCursor *cursor_for_query(DocSet     *docset,
-                                      const char *query,
-                                      size_t      len);
+static DocSetCursor *
+cursor_for_query(DocSet     *docset,
+                 const char *query,
+                 size_t      len);
 
-static void get_search_query(DocSetKind   k,
-                             const char **query,
-                             size_t      *size);
+static void
+get_search_query(DocSetKind   k,
+                 const char **query,
+                 size_t      *size);
 
-static void get_list_query(DocSetKind   k,
-                           const char **query,
-                           size_t      *size);
+static void
+get_list_query(DocSetKind   k,
+               const char **query,
+               size_t      *size);
 
-DocSet * docset_open(const char *basedir)
+DocSet *
+docset_open(const char *basedir)
 {
     size_t  base_len = strlen(basedir);
     char   *index_path;
@@ -130,19 +144,19 @@ DocSet * docset_open(const char *basedir)
     if (!set_kind(docset))
         goto close_db;
 
-    free(index_path);
     free(plist_path);
+    free(index_path);
 
     return docset;
 
 close_db:
    sqlite3_close(docset->db);
 
-free_plist_path:
-   free(plist_path);
-
 free_index_path:
     free(index_path);
+
+free_plist_path:
+   free(plist_path);
 
 free_docset:
     free(docset);
@@ -150,7 +164,8 @@ free_docset:
     return NULL;
 }
 
-int docset_close(DocSet *docset)
+int
+docset_close(DocSet *docset)
 {
     int ret_code;
 
@@ -164,29 +179,34 @@ int docset_close(DocSet *docset)
     return ret_code != SQLITE_OK;
 }
 
-const char *docset_name(DocSet *docset)
+const char *
+docset_name(DocSet *docset)
 {
     return docset->name;
 }
 
-const char *docset_bundle_identifier(DocSet *docset)
+const char *
+docset_bundle_identifier(DocSet *docset)
 {
     return docset->bundle_id;
 }
 
-const char *docset_platform_family(DocSet *docset)
+const char *
+docset_platform_family(DocSet *docset)
 {
     return docset->platform_family;
 }
 
-DocSetFlags docset_flags(DocSet *docset)
+DocSetFlags
+docset_flags(DocSet *docset)
 {
     return docset->flags;
 }
 
-void docset_set_error_handler(DocSet *docset,
-                              docset_err_handler h,
-                              void *ctx)
+void
+docset_set_error_handler(DocSet            *docset,
+                         docset_err_handler h,
+                         void              *ctx)
 {
     if (docset) {
         docset->err_handler = h;
@@ -194,7 +214,8 @@ void docset_set_error_handler(DocSet *docset,
     }
 }
 
-const char *docset_kind_name(DocSetKind k)
+const char *
+docset_kind_name(DocSetKind k)
 {
     if (DOCSET_KIND_DASH <= k && k <= DOCSET_KIND_ZDASH) {
         return KIND_NAMES[k];
@@ -202,13 +223,15 @@ const char *docset_kind_name(DocSetKind k)
     return "UNKNOWN";
 }
 
-DocSetKind docset_kind(DocSet *docset)
+DocSetKind
+docset_kind(DocSet *docset)
 {
     return docset->kind;
 }
 
-DocSetCursor *docset_find(DocSet     *docset,
-                          const char *input)
+DocSetCursor *
+docset_find(DocSet     *docset,
+            const char *input)
 {
     DocSetCursor *cursor;
     const char   *query;
@@ -229,7 +252,8 @@ DocSetCursor *docset_find(DocSet     *docset,
     return cursor;
 }
 
-DocSetCursor *docset_list_entries(DocSet *docset)
+DocSetCursor *
+docset_list_entries(DocSet *docset)
 {
     const char   *query;
     size_t        len;
@@ -238,7 +262,8 @@ DocSetCursor *docset_list_entries(DocSet *docset)
     return cursor_for_query(docset, query, len);
 }
 
-int docset_cursor_dispose(DocSetCursor *cursor)
+int
+docset_cursor_dispose(DocSetCursor *cursor)
 {
     int ret_code;
 
@@ -257,14 +282,15 @@ int docset_cursor_step(DocSetCursor *cursor)
         && sqlite3_step(cursor->stmt) == SQLITE_ROW;
 }
 
-DocSetEntry *docset_cursor_entry(DocSetCursor *cursor)
+DocSetEntry *
+docset_cursor_entry(DocSetCursor *cursor)
 {
     DocSetEntry  *e;
     sqlite3_stmt *stmt;
 
     if (!cursor) return NULL;
 
-    e = &cursor->entry;
+    e    = &cursor->entry;
     stmt = cursor->stmt;
 
     assign_buffer_col(&e->name, stmt, 0);
@@ -275,22 +301,32 @@ DocSetEntry *docset_cursor_entry(DocSetCursor *cursor)
     return e;
 }
 
-const char *docset_entry_name(DocSetEntry *entry)
+const char *
+docset_entry_name(DocSetEntry *entry)
 {
     return entry->name.data;
 }
 
-const char *docset_entry_type_name(DocSetEntry *entry)
+DocSetEntryType
+docset_entry_type(DocSetEntry *entry)
+{
+    return docset_type_by_name(entry->type.data);
+}
+
+const char *
+docset_entry_type_name(DocSetEntry *entry)
 {
     return entry->type.data;
 }
 
-const char *docset_entry_path(DocSetEntry *entry)
+const char *
+docset_entry_path(DocSetEntry *entry)
 {
     return entry->path.data;
 }
 
-const char *docset_entry_canonical_type(DocSetEntry *entry)
+const char *
+docset_entry_canonical_type(DocSetEntry *entry)
 {
     const char     *native_type = docset_entry_type_name(entry);
     DocSetEntryType type        = docset_type_by_name(native_type);
@@ -298,7 +334,8 @@ const char *docset_entry_canonical_type(DocSetEntry *entry)
     return docset_canonical_type_name(type);
 }
 
-static int init_entry(DocSetEntry *e)
+static int
+init_entry(DocSetEntry *e)
 {
     if (!docset_sb_init(&e->name,   BUF_INIT_SIZE))
         goto fail;
@@ -323,19 +360,20 @@ fail:
     return 0;
 }
 
-static void assign_buffer_col(DocSetStringBuf *buf,
-                              sqlite3_stmt    *stmt,
-                              int              col)
+static void
+assign_buffer_col(DocSetStringBuf *buf,
+                  sqlite3_stmt    *stmt,
+                  int              col)
 {
     docset_sb_assign(buf,
                      (const char *)sqlite3_column_text(stmt, col),
                      (size_t)sqlite3_column_bytes(stmt, col));
 }
 
-static int parse_props(DocSet *docset,
-                       const char *path)
+static int
+parse_props(DocSet     *docset,
+            const char *path)
 {
-    DocSetFlags flags = 0;
     DocSetProp  props[] = {
         { DOCSET_PROP_STRING, "CFBundleIdentifier",   {0} },
         { DOCSET_PROP_STRING, "CFBundleName",         {0} },
@@ -346,6 +384,7 @@ static int parse_props(DocSet *docset,
     const size_t num_props = sizeof(props) / sizeof(props[0]);
     int is_dash    = 0;
     int js_enabled = 0;
+    int result;
 
     props[0].target.str_target  = &docset->bundle_id;
     props[1].target.str_target  = &docset->name;
@@ -353,15 +392,16 @@ static int parse_props(DocSet *docset,
     props[3].target.bool_target = &is_dash;
     props[4].target.bool_target = &js_enabled;
 
-    if (is_dash)    flags |= DOCSET_IS_DASH;
-    if (js_enabled) flags |= DOCSET_IS_JS_ENABLED;
+    result = docset_parse_properties(path, props, props + num_props);
 
-    return docset_parse_properties(path,
-                                   props,
-                                   props + num_props);
+    if (is_dash)    docset->flags |= DOCSET_IS_DASH;
+    if (js_enabled) docset->flags |= DOCSET_IS_JS_ENABLED;
+
+    return result;
 }
 
-static int set_kind(DocSet *docset)
+static int
+set_kind(DocSet *docset)
 {
     if (count_tables(docset->db, "searchIndex")) {
         docset->kind = DOCSET_KIND_DASH;
@@ -376,9 +416,10 @@ static int set_kind(DocSet *docset)
     return 0;
 }
 
-static DocSetCursor *cursor_for_query(DocSet     *docset,
-                                      const char *query,
-                                      size_t      len)
+static DocSetCursor *
+cursor_for_query(DocSet     *docset,
+                 const char *query,
+                 size_t      len)
 {
     DocSetCursor *c = calloc(1, sizeof(*c));
     sqlite3_stmt *stmt;
@@ -393,11 +434,9 @@ static DocSetCursor *cursor_for_query(DocSet     *docset,
         goto free_cursor_mem;
     }
 
-    get_search_query(docset->kind, &query, &len);
-
     if (sqlite3_prepare_v2(docset->db, query, len, &stmt, NULL)
         != SQLITE_OK) {
-        report_error(docset, query);/*"Can't prepare query");*/
+        report_error(docset, "Can't prepare a query");
         goto fin_statement;
     }
 
@@ -413,21 +452,24 @@ fail:
     return NULL;
 }
 
-static void report_error(DocSet     *docset,
-                         const char *msg)
+static void
+report_error(DocSet     *docset,
+             const char *msg)
 {
     if (docset->err_handler) {
         docset->err_handler(docset->err_context, msg);
     }
 }
 
-static void report_no_mem(DocSet *docset)
+static void
+report_no_mem(DocSet *docset)
 {
     report_error(docset, "Memory allocation error");
 }
 
-static int count_tables(sqlite3    *db,
-                        const char *table)
+static int
+count_tables(sqlite3    *db,
+             const char *table)
 {
     sqlite3_stmt *stmt;
     int result = 0;
@@ -447,7 +489,8 @@ static int count_tables(sqlite3    *db,
     return result;
 }
 
-static void dispose_entry(DocSetEntry *e)
+static void
+dispose_entry(DocSetEntry *e)
 {
     docset_sb_destroy(&e->name);
     docset_sb_destroy(&e->type);
@@ -455,9 +498,10 @@ static void dispose_entry(DocSetEntry *e)
     docset_sb_destroy(&e->path);
 }
 
-static void get_search_query(DocSetKind   kind,
-                             const char **query,
-                             size_t      *len)
+static void
+get_search_query(DocSetKind   kind,
+                 const char **query,
+                 size_t      *len)
 {
     switch (kind) {
     case DOCSET_KIND_DASH:
@@ -471,9 +515,10 @@ static void get_search_query(DocSetKind   kind,
     }
 }
 
-static void get_list_query(DocSetKind   kind,
-                           const char **query,
-                           size_t      *len)
+static void
+get_list_query(DocSetKind   kind,
+               const char **query,
+               size_t      *len)
 {
     switch (kind) {
     case DOCSET_KIND_DASH:

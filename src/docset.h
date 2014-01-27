@@ -10,9 +10,9 @@
  * Example:
  * @code
  *     DocSet *docset = docset_open("C.docset");
- *     DocSetCursor * c = docset_find(docset, "printf");
+ *     DocSetCursor *c = docset_find(docset, "printf");
  *     while (docset_cursor_step(c)) {
- *         DocSetEntry * e = docset_cursor_entry(c);
+ *         DocSetEntry *e = docset_cursor_entry(c);
  *         printf("%s: %s\n",
  *                docset_entry_name(e),
  *                docset_entry_path(e));
@@ -41,10 +41,13 @@ typedef enum {
 
 /**
  * @brief An enum for all known entry types.
+ *
+ * See http://kapeli.com/docsets#supportedentrytypes
  */
 typedef enum {
     DOCSET_TYPE_UNKNOWN = -1,
     DOCSET_TYPE_ATTRIBUTE = 0,
+    DOCSET_TYPE_FIRST = DOCSET_TYPE_ATTRIBUTE,
     DOCSET_TYPE_BINDING = 1,
     DOCSET_TYPE_BUILTIN = 2,
     DOCSET_TYPE_CALLBACK = 3,
@@ -104,7 +107,7 @@ typedef enum {
     DOCSET_TYPE_UNION = 57,
     DOCSET_TYPE_VALUE = 58,
     DOCSET_TYPE_VARIABLE = 59,
-    DOCSET_LAST_TYPE = DOCSET_TYPE_VARIABLE
+    DOCSET_TYPE_LAST = DOCSET_TYPE_VARIABLE
 } DocSetEntryType;
 
 /**
@@ -130,20 +133,23 @@ typedef void (*docset_err_handler)(void *, const char *);
  * @return pointer to DocSet on success,
  *         NULL on error.
  */
-DocSet *docset_open(const char *basedir);
+DocSet *
+docset_open(const char *basedir);
 
 /**
  * @brief Closes docset and frees all the allocated docset resources.
  */
-int docset_close(DocSet *docset);
+int
+docset_close(DocSet *docset);
 
 /**
  * @brief Sets function that will be called on error with specified
  * context.
  */
-void docset_set_error_handler(DocSet *docset,
-                              docset_err_handler h,
-                              void   *ctx);
+void
+docset_set_error_handler(DocSet            *docset,
+                         docset_err_handler h,
+                         void              *ctx);
 
 /** @defgroup meta Metadata Access
  *  @{
@@ -151,19 +157,22 @@ void docset_set_error_handler(DocSet *docset,
 /**
  * @brief Returns docset kind.
  */
-DocSetKind docset_kind(DocSet *docset);
+DocSetKind
+docset_kind(DocSet *docset);
 
 /**
  * @brief Returns docset bundle identifier. It's usually useful for
  * computers.
  */
-const char *docset_bundle_identifier(DocSet *docset);
+const char *
+docset_bundle_identifier(DocSet *docset);
 
 /**
  * @brief Returns docset name. This name is usually used to display it
  * to a human.
  */
-const char *docset_name(DocSet *docset);
+const char *
+docset_name(DocSet *docset);
 
 /**
  * @brief Returns docset platform family.
@@ -171,17 +180,20 @@ const char *docset_name(DocSet *docset);
  * Families are used by the Dash application as keywords for search
  * filter.
  */
-const char *docset_platform_family(DocSet *docset);
+const char *
+docset_platform_family(DocSet *docset);
 
 /**
  * @brief Returns string representation of the docset kind.
  */
-const char *docset_kind_name(DocSetKind kind);
+const char *
+docset_kind_name(DocSetKind kind);
 
 /**
  * @brief Returns docset flags.
  */
-DocSetFlags docset_flags(DocSet *docset);
+DocSetFlags
+docset_flags(DocSet *docset);
 
 /** @} */
 
@@ -192,24 +204,28 @@ DocSetFlags docset_flags(DocSet *docset);
 /**
  * @brief Starts substring search on docset.
  */
-DocSetCursor *docset_find(DocSet     *docset,
-                          const char *input);
+DocSetCursor *
+docset_find(DocSet     *docset,
+            const char *input);
 
 /**
  * @brief Returns all the docset entries.
  */
-DocSetCursor *docset_list_entries(DocSet *docset);
+DocSetCursor *
+docset_list_entries(DocSet *docset);
 
 /**
  * @brief Disposes a cursor.
  */
-int docset_cursor_dispose(DocSetCursor *cursor);
+int
+docset_cursor_dispose(DocSetCursor *cursor);
 
 /**
  * @brief Advances the cursor to the next entry.
  * @return non-zero if cursor points to a valid item
  */
-int docset_cursor_step(DocSetCursor *cursor);
+int
+docset_cursor_step(DocSetCursor *cursor);
 
 /**
  * @brief Returns entry this cursor points to.
@@ -217,7 +233,8 @@ int docset_cursor_step(DocSetCursor *cursor);
  * @note The entry is owned by a cursor. Client MUST NOT dispose this
  * entry.
  */
-DocSetEntry *docset_cursor_entry(DocSetCursor *cursor);
+DocSetEntry *
+docset_cursor_entry(DocSetCursor *cursor);
 
 /** @} */
 
@@ -227,37 +244,43 @@ DocSetEntry *docset_cursor_entry(DocSetCursor *cursor);
 /**
  * @brief Returns current entry name.
  */
-const char *docset_entry_name(DocSetEntry *entry);
+const char *
+docset_entry_name(DocSetEntry *entry);
 
 /**
  * @brief Returns type of the current entry.
  */
-DocSetEntryType docset_entry_type(DocSetEntry *entry);
+DocSetEntryType
+docset_entry_type(DocSetEntry *entry);
 
 /**
  * @brief Returns current entry path. The path could contain the
  * anchor symbol (#).
  */
-const char *docset_entry_path(DocSetEntry *entry);
+const char *
+docset_entry_path(DocSetEntry *entry);
 
 /**
  * @brief Returns type name of the entry as it's recorded in the
  * index.
  */
-const char *docset_entry_type_name(DocSetEntry *entry);
+const char *
+docset_entry_type_name(DocSetEntry *entry);
 
 /**
  * @brief Returns canonical name type of entry.
  *
  * @see docset_canonical_type_name
  */
-const char *docset_entry_canonical_type(DocSetEntry *entry);
+const char *
+docset_entry_canonical_type(DocSetEntry *entry);
 
 /**
  * @brief Returns absolute link to the entry.
  * @see docset_entry_path
  */
-const char *docset_entry_link(DocSetEntry *entry);
+const char *
+docset_entry_link(DocSetEntry *entry);
 
 /** @} */
 
@@ -271,12 +294,14 @@ const char *docset_entry_link(DocSetEntry *entry);
  * @return known entry type on successful matching or
  *         DOCSET_TYPE_UNKNOWN if no matching found.
  */
-DocSetEntryType docset_type_by_name(const char *name);
+DocSetEntryType
+docset_type_by_name(const char *name);
 
 /**
  * @brief Returns canonical name of entry type.
  */
-const char *docset_canonical_type_name(DocSetEntryType type);
+const char *
+docset_canonical_type_name(DocSetEntryType type);
 
 /** @} */
 

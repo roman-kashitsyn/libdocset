@@ -141,6 +141,7 @@ static TypeNameMapping TYPE_NAME_TO_ID[] = {
     { "clm", DOCSET_TYPE_METHOD },
     { "func", DOCSET_TYPE_FUNCTION },
     { "macro", DOCSET_TYPE_MACRO },
+    { "specialization", DOCSET_TYPE_TYPE },
     { "tdef", DOCSET_TYPE_TYPE },
 };
 
@@ -224,7 +225,7 @@ DocSetEntryType docset_type_by_name(const char *name)
 
 const char * docset_canonical_type_name(DocSetEntryType type)
 {
-    if (0 <= type && type <= DOCSET_LAST_TYPE) {
+    if (DOCSET_TYPE_FIRST <= type && type <= DOCSET_TYPE_LAST) {
         return TYPE_ID_TO_NAME[type];
     }
     return "Unknown";
