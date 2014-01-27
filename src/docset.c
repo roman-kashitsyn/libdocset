@@ -20,6 +20,8 @@
     "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "    \
     "join zfilepath tf on (tm.zfile=tf.z_pk)"
 
+#define COLUMN_ORDERING " order by name asc, type asc"
+
 #define BUF_INIT_SIZE 100
 
 static const char INDEX_FILE_PATH[] = "/Contents/Resources/docSet.dsidx";
@@ -35,12 +37,20 @@ static const char TABLE_COUNT_QUERY[] =
 static const char DASH_NAME_LIKE_QUERY[] =
     DASH_BASE_QUERY
     " where name like ?"
-    " order by name asc, type asc";
+    COLUMN_ORDERING;
+
+static const char DASH_FULL_QUERY[] =
+    DASH_BASE_QUERY
+    COLUMN_ORDERING;
+
+static const char ZDASH_FULL_QUERY[] =
+    ZDASH_BASE_QUERY
+    COLUMN_ORDERING;
 
 static const char ZDASH_NAME_LIKE_QUERY[] =
     ZDASH_BASE_QUERY
     " where name like ?"
-    " order by name asc, type asc";
+    COLUMN_ORDERING;
 
 struct DocSet {
     sqlite3    *db;
@@ -522,12 +532,12 @@ get_list_query(DocSetKind   kind,
 {
     switch (kind) {
     case DOCSET_KIND_DASH:
-        *query = DASH_BASE_QUERY;
-        *len   = sizeof(DASH_BASE_QUERY);
+        *query = DASH_FULL_QUERY;
+        *len   = sizeof(DASH_FULL_QUERY);
         break;
     case DOCSET_KIND_ZDASH:
-        *query = ZDASH_BASE_QUERY;
-        *len   = sizeof(ZDASH_BASE_QUERY);
+        *query = ZDASH_FULL_QUERY;
+        *len   = sizeof(ZDASH_FULL_QUERY);
         break;
     }
 }
