@@ -106,7 +106,7 @@ count_tables(sqlite3    *db,
              const char *table);
 
 static void
-dispose_entry(DocSetEntry *entry);
+dispose_entry   (DocSetEntry *entry);
 
 static DocSetCursor *
 cursor_for_query(DocSet     *docset,
@@ -126,9 +126,9 @@ get_list_query(DocSetKind   k,
 DocSet *
 docset_open(const char *basedir)
 {
+    char   *index_path = NULL;
+    char   *plist_path = NULL;
     size_t  base_len = strlen(basedir);
-    char   *index_path;
-    char   *plist_path;
     DocSet *docset = calloc(1, sizeof(*docset));
 
     if (!docset) return NULL;
@@ -136,41 +136,33 @@ docset_open(const char *basedir)
     plist_path = malloc(base_len + sizeof(INFO_PLIST_PATH) + 1);
 
     if (plist_path == NULL)
-        goto free_docset;
+        goto fail;
 
     sprintf(plist_path, "%s%s", basedir, INFO_PLIST_PATH);
     if (!parse_props(docset, plist_path))
-        goto free_plist_path;
+        goto fail;
 
     index_path = malloc(base_len + sizeof(INDEX_FILE_PATH) + 1);
 
     if (index_path == NULL)
-        goto free_plist_path;
+        goto fail;
 
     sprintf(index_path, "%s%s", basedir, INDEX_FILE_PATH);
     if (sqlite3_open(index_path, &docset->db) != SQLITE_OK)
-        goto free_index_path;
+        goto fail;
 
     if (!set_kind(docset))
-        goto close_db;
+        goto fail;
 
     free(plist_path);
     free(index_path);
 
     return docset;
 
-close_db:
-   sqlite3_close(docset->db);
-
-free_index_path:
+fail:
+    (void)docset_close(docset);
     free(index_path);
-
-free_plist_path:
-   free(plist_path);
-
-free_docset:
-    free(docset);
-
+    free(plist_path);
     return NULL;
 }
 
@@ -431,8 +423,8 @@ cursor_for_query(DocSet     *docset,
                  const char *query,
                  size_t      len)
 {
+    sqlite3_stmt *stmt = NULL;
     DocSetCursor *c = calloc(1, sizeof(*c));
-    sqlite3_stmt *stmt;
 
     if (!c) {
         report_no_mem(docset);
@@ -441,24 +433,22 @@ cursor_for_query(DocSet     *docset,
 
     if (!init_entry(&c->entry)) {
         report_no_mem(docset);
-        goto free_cursor_mem;
+        goto fail;
     }
 
     if (sqlite3_prepare_v2(docset->db, query, len, &stmt, NULL)
         != SQLITE_OK) {
         report_error(docset, "Can't prepare a query");
-        goto fin_statement;
+        goto fail;
     }
 
     c->docset = docset;
-    c->stmt = stmt;
+    c->stmt   = stmt;
     return c;
 
-fin_statement:
-    sqlite3_finalize(stmt);
-free_cursor_mem:
-    free(c);
 fail:
+    sqlite3_finalize(stmt);
+    free(c);
     return NULL;
 }
 
