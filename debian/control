@@ -1,0 +1,17 @@
+Source: libdocset
+Section: Libraries
+Priority: optional
+Maintainer: Roman Kashitsyn <roman.kashitsyn@gmail.com>
+Build-Depends:
+ cmake (>= 2.8),
+ debhelper (>= 7.0.50~),
+ libsqlite3-dev,
+ libxml2
+Standards-Version: 3.8.0
+Vcs-Git: git://github.com/roman-kashitsyn/libdocset.git
+Vcs-Browser: https://github.com/roman-kashitsyn/libdocset
+
+Package: libdocset
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library to read docset bundles

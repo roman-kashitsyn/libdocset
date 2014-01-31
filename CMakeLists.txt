@@ -46,6 +46,13 @@ install(TARGETS docset
 
 install(FILES src/docset.h DESTINATION include/docset)
 
+if(UNIX AND NOT APPLE)
+  configure_file("data/libdocset.pc.in" "libdocset.pc" @ONLY)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/libdocset.pc
+    DESTINATION lib/pkgconfig)
+endif()
+
 if(build_examples)
   add_executable(docgrep examples/docgrep.c)
   target_link_libraries(docgrep docset)

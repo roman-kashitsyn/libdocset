@@ -257,8 +257,8 @@ docset_find(DocSet     *docset,
 DocSetCursor *
 docset_list_entries(DocSet *docset)
 {
-    const char   *query;
-    size_t        len;
+    const char   *query = NULL;
+    size_t        len   = 0;
 
     get_list_query(docset->kind, &query, &len);
     return cursor_for_query(docset, query, len);
@@ -512,6 +512,9 @@ get_search_query(DocSetKind   kind,
         *query = ZDASH_NAME_LIKE_QUERY;
         *len   = sizeof(ZDASH_NAME_LIKE_QUERY);
         break;
+    default:
+        *query = NULL;
+        *len = 0;
     }
 }
 

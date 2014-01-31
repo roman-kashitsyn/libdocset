@@ -1,0 +1,13 @@
+# Package Information for pkg-config
+prefix=@CMAKE_INSTALL_PREFIX@
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${exec_prefix}/include
+
+Name: @CMAKE_PROJECT_NAME@
+Description: A library to read docset bundles
+Requires: sqlite3 libxml-2.0
+Version: @VERSION@
+Libs: -L${libdir} -ldocset
+Cflags: -I${includedir}/docset
+
