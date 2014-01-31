@@ -7,6 +7,8 @@ option(build_examples "Build all the docset examples" ON)
 set(MAJOR_VER 0)
 set(MINOR_VER 1)
 set(PATCH_VER 0)
+set(VERSION "${MAJOR_VER}.${MINOR_VER}.${PATCH_VER}")
+set(SOVERSION 0)
 
 project(libdocset C)
 
@@ -27,6 +29,12 @@ add_library(docset SHARED
   src/type_names.c
   src/prop_parser.c
   src/stringbuf.c)
+
+set_target_properties(
+  docset PROPERTIES
+  VERSION   ${VERSION}
+  SOVERSION ${SOVERSION}
+)
 
 target_link_libraries(
   docset
@@ -52,7 +60,6 @@ set(CPACK_GENERATOR "DEB")
 set(CPACK_PACKAGE_VERSION_MAJOR ${MAJOR_VER})
 set(CPACK_PACKAGE_VERSION_MINOR ${MINOR_VER})
 set(CPACK_PACKAGE_VERSION_PATCH ${PATCH_VER})
-set(CPACK_PACKAGE_VERSION "${MAJOR_VER}-${MINOR_VER}-${PATCH_VER}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to read docset bundles")
 
 set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/LICENSE.txt)
