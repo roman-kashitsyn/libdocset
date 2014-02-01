@@ -339,27 +339,16 @@ docset_entry_canonical_type(DocSetEntry *entry)
 static int
 init_entry(DocSetEntry *e)
 {
-    if (!docset_sb_init(&e->name,   BUF_INIT_SIZE))
-        goto fail;
+    int ok
+        = docset_sb_init(&e->name,   BUF_INIT_SIZE)
+        & docset_sb_init(&e->type,   BUF_INIT_SIZE)
+        & docset_sb_init(&e->parent, BUF_INIT_SIZE)
+        & docset_sb_init(&e->path,   BUF_INIT_SIZE)
+        ;
 
-    if (!docset_sb_init(&e->type,   BUF_INIT_SIZE))
-        goto destroy_name;
+    if (!ok) dispose_entry(e);
 
-    if (!docset_sb_init(&e->parent, BUF_INIT_SIZE))
-        goto destroy_type;
-
-    if (!docset_sb_init(&e->path,   BUF_INIT_SIZE))
-        goto destroy_parent;
-
-    return 1;
-destroy_parent:
-    docset_sb_destroy(&e->parent);
-destroy_type:
-    docset_sb_destroy(&e->type);
-destroy_name:
-    docset_sb_destroy(&e->type);
-fail:
-    return 0;
+    return ok;
 }
 
 static void
@@ -376,7 +365,7 @@ static int
 parse_props(DocSet     *docset,
             const char *path)
 {
-    DocSetProp  props[] = {
+    DocSetProp props[] = {
         { DOCSET_PROP_STRING, "CFBundleIdentifier",   {0} },
         { DOCSET_PROP_STRING, "CFBundleName",         {0} },
         { DOCSET_PROP_STRING, "DocSetPlatformFamily", {0} },
