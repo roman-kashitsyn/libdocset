@@ -1,5 +1,5 @@
-Source: libdocset
-Section: Libraries
+Source: libdocset0
+Section: libs
 Priority: optional
 Maintainer: Roman Kashitsyn <roman.kashitsyn@gmail.com>
 Build-Depends:
@@ -11,7 +11,9 @@ Standards-Version: 3.8.0
 Vcs-Git: git://github.com/roman-kashitsyn/libdocset.git
 Vcs-Browser: https://github.com/roman-kashitsyn/libdocset
 
-Package: libdocset
+Package: libdocset0
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Library to read docset bundles
+ The library provides simple interface to read docset
+ bundles used by the Dash application for the Mac OS.
