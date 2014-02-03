@@ -13,7 +13,7 @@ set(SOVERSION 0)
 project(libdocset C)
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  add_definitions("-Wall -Werror -Wpedantic -std=c89")
+  add_definitions("-Wall -Werror -pedantic -std=c89")
 endif()
 
 include_directories(src)
@@ -61,18 +61,3 @@ if(build_examples)
   target_link_libraries(docfile docset)
 endif()
 
-set(CPACK_PACKAGE_NAME "libdocset")
-set(CPACK_GENERATOR "DEB")
-
-set(CPACK_PACKAGE_VERSION_MAJOR ${MAJOR_VER})
-set(CPACK_PACKAGE_VERSION_MINOR ${MINOR_VER})
-set(CPACK_PACKAGE_VERSION_PATCH ${PATCH_VER})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Library to read docset bundles")
-
-set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_SOURCE_DIR}/COPYING)
-set(CPACK_PACKAGE_CONTACT "Roman Kashitsyn <roman.kashitsyn@gmail.com>")
-
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsqlite3-0, libxml2")
-set(CPACK_DEBIAN_PACKAGE_SECTION "libs")
-
-include(CPack)

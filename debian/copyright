@@ -1,0 +1,8 @@
+Format: http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: libdocset
+Upstream-Contact: Roman Kashitsyn <roman.kashitsyn@gmail.com>
+Source: https://git hub.com/roman-kashitsyn/libdocset
+
+Files: *
+Copyright: (C) 2014 Roman Kashitsyn <roman.kashitsyn@gmail.com>
+License: MIT
