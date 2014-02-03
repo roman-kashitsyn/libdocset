@@ -4,10 +4,10 @@ Priority: optional
 Maintainer: Roman Kashitsyn <roman.kashitsyn@gmail.com>
 Build-Depends:
  cmake (>= 2.8),
- debhelper (>= 7.0.50~),
+ debhelper (>= 9),
  libsqlite3-dev,
  libxml2
-Standards-Version: 3.8.0
+Standards-Version: 3.9.4
 Vcs-Git: git://github.com/roman-kashitsyn/libdocset.git
 Vcs-Browser: https://github.com/roman-kashitsyn/libdocset
 
