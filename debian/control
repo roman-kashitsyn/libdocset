@@ -17,3 +17,11 @@ Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: Library to read docset bundles
  The library provides simple interface to read docset
  bundles used by the Dash application for the Mac OS.
+
+Package: libdocset0-dev
+Section: libdevel
+Architecture: any
+Depends: libdocset0 (= ${source:Version}),
+  ${shlibs:Depends}, ${misc:Depends}
+Description: Library to read docset bundles
+ Development files package.
