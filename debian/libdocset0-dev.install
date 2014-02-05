@@ -1,2 +1,3 @@
 usr/lib/libdocset.so
 usr/include/docset
+usr/lib/pkgconfig/libdocset.pc
