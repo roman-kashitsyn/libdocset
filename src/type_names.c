@@ -136,10 +136,13 @@ static TypeNameMapping TYPE_NAME_TO_ID[] = {
 
     /* Unspecified but seen in practice */
 
+    { "Word", DOCSET_TYPE_KEYWORD },
+    { "cat", DOCSET_TYPE_CATEGORY },
     { "cl", DOCSET_TYPE_CLASS },
     { "clconst", DOCSET_TYPE_CONSTANT },
     { "clm", DOCSET_TYPE_METHOD },
     { "func", DOCSET_TYPE_FUNCTION },
+    { "instp", DOCSET_TYPE_INSTRUCTION },
     { "macro", DOCSET_TYPE_MACRO },
     { "specialization", DOCSET_TYPE_TYPE },
     { "tdef", DOCSET_TYPE_TYPE },
