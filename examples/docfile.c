@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #define FIELD_FORMAT "%-16s %s\n"
+#define INT_FIELD_FORMAT "%-16s %d\n"
 
 static void usage(const char *progname)
 {
@@ -46,6 +47,7 @@ int main(int argc, const char* argv[])
            is_set(docset, DOCSET_IS_DASH));
     printf(FIELD_FORMAT, "JS Enabled?",
            is_set(docset, DOCSET_IS_JS_ENABLED));
+    printf(INT_FIELD_FORMAT, "Entry Count", docset_count(docset));
 
     docset_close(docset);
 

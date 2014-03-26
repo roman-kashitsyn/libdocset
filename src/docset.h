@@ -17,6 +17,8 @@
  *                docset_entry_name(e),
  *                docset_entry_path(e));
  *     }
+ *     docset_cursor_dispose(c);
+ *     docset_close(docset);
  * @endcode
  */
 #ifndef DOCSET_H
@@ -30,13 +32,13 @@ extern "C" {
  * @brief An enum for all known docset kinds.
  */
 typedef enum {
-    DOCSET_KIND_DASH,
-    DOCSET_KIND_ZDASH
+    DOCSET_KIND_DASH, //< Dash format (http://kapeli.com/docsets#dashDocset)
+    DOCSET_KIND_ZDASH //< XCode format
 } DocSetKind;
 
 typedef enum {
-    DOCSET_IS_DASH       = 1,
-    DOCSET_IS_JS_ENABLED = 1 << 1
+    DOCSET_IS_DASH       = 1,     //< The docset was produced by Dash
+    DOCSET_IS_JS_ENABLED = 1 << 1 //< It's allowed to execute docset JS
 } DocSetFlags;
 
 /**
@@ -141,6 +143,12 @@ docset_open(const char *basedir);
  */
 int
 docset_close(DocSet *docset);
+
+/**
+ * @brief Returns current number of entries in docset.
+ */
+unsigned int
+docset_count(DocSet *docset);
 
 /**
  * @brief Sets function that will be called on error with specified
@@ -274,13 +282,6 @@ docset_entry_type_name(DocSetEntry *entry);
  */
 const char *
 docset_entry_canonical_type(DocSetEntry *entry);
-
-/**
- * @brief Returns absolute link to the entry.
- * @see docset_entry_path
- */
-const char *
-docset_entry_link(DocSetEntry *entry);
 
 /** @} */
 
