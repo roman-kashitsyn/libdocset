@@ -1,2 +1,5 @@
 *.o
 *.so
+*.pyc
+debian/
+obj-x86_64-linux-gnu/
