@@ -1,3 +1,9 @@
+libdocset0 (0.2.0) trusty; urgency=low
+
+  * Add C++ bindings
+
+ -- Roman Kashitsyn <lifted@yandex-team.ru>  Sun, 04 May 2014 22:58:12 +0400
+
 libdocset0 (0.1.0-1) saucy; urgency=low
 
   * Update build dependencies

@@ -9,8 +9,13 @@
  *
  * Example:
  * @code
- *     DocSet *docset = docset_open("C.docset");
- *     DocSetCursor *c = docset_find(docset, "printf");
+ *     DocSet *docset;
+ *     DocSetCursor *c;
+ *     DocSetError err;
+ *     if ((err = docset_try_open(&docset, "C.docset")) != DOCSET_OK) {
+ *         return;
+ *     }
+ *     c = docset_find(docset, "printf");
  *     while (docset_cursor_step(c)) {
  *         DocSetEntry *e = docset_cursor_entry(c);
  *         printf("%s: %s\n",
@@ -32,17 +37,36 @@ extern "C" {
  * @brief An enum for all known docset kinds.
  */
 typedef enum {
-    DOCSET_KIND_DASH, //< Dash format (http://kapeli.com/docsets#dashDocset)
-    DOCSET_KIND_ZDASH //< XCode format
+    /** Unrecognized docset kind. */
+    DOCSET_KIND_UNKNOWN = -1,
+    /** Dash format, see <http://kapeli.com/docsets#dashDocset> */
+    DOCSET_KIND_DASH = 0,
+    /** XCode format */
+    DOCSET_KIND_ZDASH = 1
 } DocSetKind;
 
 typedef enum {
-    DOCSET_IS_DASH       = 1,     //< The docset was produced by Dash
-    DOCSET_IS_JS_ENABLED = 1 << 1 //< It's allowed to execute docset JS
+    /** The docset was produced by Dash. */
+    DOCSET_IS_DASH       = 1,
+    /** It's allowed to execute docset JS. */
+    DOCSET_IS_JS_ENABLED = 1 << 1
 } DocSetFlags;
 
 /**
- * @brief An enum for all known entry types.
+ * @brief All possible errors.
+ */
+typedef enum {
+    DOCSET_OK,
+    DOCSET_BAD_CALL,
+    DOCSET_NO_MEM,
+    DOCSET_NO_INFO_FILE,
+    DOCSET_BAD_XML,
+    DOCSET_NO_DB,
+    DOCSET_BAD_DB
+} DocSetError;
+
+/**
+ * @brief All known entry types.
  *
  * See http://kapeli.com/docsets#supportedentrytypes
  */
@@ -132,6 +156,17 @@ typedef void (*docset_err_handler)(void *, const char *);
 /**
  * @brief Opens a docset for reading.
  *
+ * @param basedir base docset directory
+ * @param docset docset pointer sink
+ * @return error code
+ */
+DocSetError
+docset_try_open(DocSet **docset, const char *basedir);
+
+/**
+ * @brief Opens a docset for reading.
+ *
+ * @param basedir base docset directory
  * @return pointer to DocSet on success,
  *         NULL on error.
  */
@@ -141,7 +176,7 @@ docset_open(const char *basedir);
 /**
  * @brief Closes docset and frees all the allocated docset resources.
  */
-int
+DocSetError
 docset_close(DocSet *docset);
 
 /**
@@ -153,11 +188,19 @@ docset_count(DocSet *docset);
 /**
  * @brief Sets function that will be called on error with specified
  * context.
+ * @note It's safe to throw from error handler, no libdocset resources
+ * will leak.
  */
 void
 docset_set_error_handler(DocSet            *docset,
                          docset_err_handler h,
                          void              *ctx);
+
+/**
+ * @brief Returns text representation of error.
+ */
+const char *
+docset_error_string(DocSetError err);
 
 /** @defgroup meta Metadata Access
  *  @{

@@ -1,14 +1,13 @@
-# Package Information for pkg-config
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${exec_prefix}/include
 
 Name: @CMAKE_PROJECT_NAME@
-Description: A library to read docset bundles
+Description: A library to read docset bundles - C++ bindings.
 URL: https://github.com/roman-kashitsyn/libdocset
-Requires.private: sqlite3 libxml-2.0
+Requires: libdocset
 Version: @VERSION@
-Libs: -L${libdir} -ldocset
+Libs: -L${libdir} -ldocset++ -ldocset
 Cflags: -I${includedir}/docset
 

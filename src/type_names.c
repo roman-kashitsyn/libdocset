@@ -3,6 +3,8 @@
 #include <string.h>
 #include <assert.h>
 
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
+
 #define Attribute "Attribute"
 #define Binding "Binding"
 #define Builtin "Builtin"
@@ -133,9 +135,9 @@ static TypeNameMapping TYPE_NAME_TO_ID[] = {
     { Union, DOCSET_TYPE_UNION },
     { Value, DOCSET_TYPE_VALUE },
     { Variable, DOCSET_TYPE_VARIABLE },
+};
 
-    /* Unspecified but seen in practice */
-
+static TypeNameMapping EXTRA_NAME_TO_ID[] = {
     { "Word", DOCSET_TYPE_KEYWORD },
     { "cat", DOCSET_TYPE_CATEGORY },
     { "cl", DOCSET_TYPE_CLASS },
@@ -211,19 +213,28 @@ static const char * TYPE_ID_TO_NAME[] = {
     Variable,
 };
 
-DocSetEntryType docset_type_by_name(const char *name)
+static DocSetEntryType
+find(const char *name, TypeNameMapping *map, int l, int h)
 {
-    /* Actually, reimplement binary search here is much faster and
+     /* Actually, reimplement binary search here is much
      * simpler than to use bsearch from the standard library. */
-    int l = 0, h = sizeof(TYPE_NAME_TO_ID) / sizeof(TYPE_NAME_TO_ID[0]);
     while (l < h) {
         int m = (h + l) / 2; /* We know that upper bound, no int overflow here. */
-        int cmp = strcmp(name, TYPE_NAME_TO_ID[m].type_name);
-        if (cmp == 0) return TYPE_NAME_TO_ID[m].type;
+        int cmp = strcmp(name, map[m].type_name);
+        if (cmp == 0) return map[m].type;
         if (cmp < 0) h = m;
         else l = m + 1;
     }
     return DOCSET_TYPE_UNKNOWN;
+}
+
+DocSetEntryType docset_type_by_name(const char *name)
+{
+    DocSetEntryType t;
+    t = find(name, TYPE_NAME_TO_ID, 0, ARRAY_SIZE(TYPE_NAME_TO_ID));
+    return (t != DOCSET_TYPE_UNKNOWN)
+           ? t
+           : find(name, EXTRA_NAME_TO_ID, 0, ARRAY_SIZE(EXTRA_NAME_TO_ID));
 }
 
 const char * docset_canonical_type_name(DocSetEntryType type)

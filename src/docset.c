@@ -25,45 +25,44 @@
 
 #define BUF_INIT_SIZE 100
 
-static const char INDEX_FILE_PATH[] = "/Contents/Resources/docSet.dsidx";
-static const char INFO_PLIST_PATH[] = "/Contents/Info.plist";
+#define PLIST_FILE_NAME "Info.plist"
+#define DB_FILE_NAME "docSet.dsidx"
+
+#define DOCSET_SET_FLAG(flags, flag) ((flags) = (DocSetFlags)((flags) | (flag)))
+
+static const char INDEX_FILE_PATH[] = "/Contents/Resources/" DB_FILE_NAME;
+static const char INFO_PLIST_PATH[] = "/Contents/" PLIST_FILE_NAME;
 
 static const char *KIND_NAMES[] = { "DASH", "ZDASH" };
 
 static const char TABLE_COUNT_QUERY[] = "select count(*) from sqlite_master "
                                         "where type='table' and name=?";
 
-static const char DASH_NAME_LIKE_QUERY[] =
-    DASH_BASE_QUERY " where name like ?" COLUMN_ORDERING;
+typedef struct QueryTable
+{
+    const char *all_query;
+    const char *name_like_query;
+    const char *count_query;
+} QueryTable;
 
-static const char DASH_FULL_QUERY[] = DASH_BASE_QUERY COLUMN_ORDERING;
-
-static const char ZDASH_FULL_QUERY[] = ZDASH_BASE_QUERY COLUMN_ORDERING;
-
-static const char ZDASH_NAME_LIKE_QUERY[] =
-    ZDASH_BASE_QUERY " where name like ?" COLUMN_ORDERING;
-
-static const char DASH_COUNT_QUERY[] = "select count(*) from searchIndex";
-
-static const char ZDASH_COUNT_QUERY[] = "select count(*) from ztoken";
-
-enum QueryType {
-    QUERY_NAME_LIKE_SEARCH, // Search by pattern query
-    QUERY_FULL_SCAN,        // Full index scan query
-    QUERY_COUNT             // Entry count query
+static QueryTable dash_query_table =
+{
+    DASH_BASE_QUERY COLUMN_ORDERING,
+    DASH_BASE_QUERY " where name like ? " COLUMN_ORDERING,
+    "select count(*) from searchIndex"
 };
 
-static const char *QUERIES[] = {
-    DASH_NAME_LIKE_QUERY, ZDASH_NAME_LIKE_QUERY, DASH_FULL_QUERY,
-    ZDASH_FULL_QUERY,     DASH_COUNT_QUERY,      ZDASH_COUNT_QUERY,
+static QueryTable zdash_query_table =
+{
+    ZDASH_BASE_QUERY COLUMN_ORDERING,
+    ZDASH_BASE_QUERY " where name like ? " COLUMN_ORDERING,
+    "select count(*) from ztoken"
 };
-
-#define IDX(query, kind) ((query) * 2 + (kind))
 
 struct DocSet
 {
     sqlite3 *db;
-    DocSetKind kind;
+    QueryTable *query_table;
     DocSetFlags flags;
 
     char *bundle_id;
@@ -91,13 +90,15 @@ struct DocSetCursor
 
 static int init_entry(DocSetEntry *e);
 
+static int file_exists(const char *);
+
 static void assign_buffer_col(DocSetStringBuf *buf,
                               sqlite3_stmt *stmt,
                               int col);
 
 static int parse_props(DocSet *docset, const char *path);
 
-static int set_kind(DocSet *);
+static int set_query_table(DocSet *);
 
 static void report_error(DocSet *docset, const char *message);
 
@@ -113,60 +114,90 @@ static DocSetCursor *cursor_for_query(DocSet *docset,
 
 DocSet *docset_open(const char *basedir)
 {
+    DocSet *ds = NULL;
+    (void)docset_try_open(&ds, basedir);
+    return ds;
+}
+
+DocSetError docset_try_open(DocSet **docset, const char *basedir)
+{
     char *index_path = NULL;
     char *plist_path = NULL;
     size_t base_len = strlen(basedir);
-    DocSet *docset = calloc(1, sizeof(*docset));
+    DocSetError err = DOCSET_OK;
 
-    if (!docset)
-        return NULL;
+    if (!docset || !basedir || !base_len) {
+        return DOCSET_BAD_CALL;
+    }
 
-    plist_path = malloc(base_len + sizeof(INFO_PLIST_PATH) + 1);
+    *docset = (DocSet *) calloc(1, sizeof(**docset));
 
-    if (plist_path == NULL)
+    if (!*docset) {
+        return DOCSET_NO_MEM;
+    }
+
+    plist_path = (char *) malloc(base_len + sizeof(INFO_PLIST_PATH) + 1);
+
+    if (plist_path == NULL) {
+        err = DOCSET_NO_MEM;
         goto fail;
+    }
 
     sprintf(plist_path, "%s%s", basedir, INFO_PLIST_PATH);
-    if (!parse_props(docset, plist_path))
-        goto fail;
 
-    index_path = malloc(base_len + sizeof(INDEX_FILE_PATH) + 1);
-
-    if (index_path == NULL)
+    if (!file_exists(plist_path)) {
+        err = DOCSET_NO_INFO_FILE;
         goto fail;
+    }
+    if (!parse_props(*docset, plist_path)) {
+        err = DOCSET_BAD_XML;
+        goto fail;
+    }
+
+    index_path = (char *) malloc(base_len + sizeof(INDEX_FILE_PATH) + 1);
+
+    if (index_path == NULL) {
+        err = DOCSET_NO_MEM;
+        goto fail;
+    }
 
     sprintf(index_path, "%s%s", basedir, INDEX_FILE_PATH);
-    if (sqlite3_open(index_path, &docset->db) != SQLITE_OK)
+    if (sqlite3_open(index_path, &(*docset)->db) != SQLITE_OK) {
+        err = DOCSET_BAD_DB;
         goto fail;
+    }
 
-    if (!set_kind(docset))
+    if (!set_query_table(*docset)) {
+        err = DOCSET_BAD_DB;
         goto fail;
+    }
 
     free(plist_path);
     free(index_path);
 
-    return docset;
+    return err;
 
 fail:
-    (void)docset_close(docset);
+    (void)docset_close(*docset);
     free(index_path);
     free(plist_path);
-    return NULL;
+    return err;
 }
 
-int docset_close(DocSet *docset)
+DocSetError docset_close(DocSet *docset)
 {
     int ret_code;
 
-    if (!docset)
-        return 1;
+    if (!docset) {
+        return DOCSET_OK;
+    }
 
     ret_code = sqlite3_close(docset->db);
     free(docset->bundle_id);
     free(docset->name);
     free(docset->platform_family);
     free(docset);
-    return ret_code != SQLITE_OK;
+    return ret_code == SQLITE_OK ? DOCSET_OK : DOCSET_BAD_DB;
 }
 
 unsigned int docset_count(DocSet *docset)
@@ -174,21 +205,24 @@ unsigned int docset_count(DocSet *docset)
     sqlite3_stmt *stmt = NULL;
     unsigned int result = 0;
     const char *query = NULL;
+    int error = 0;
 
     if (!docset) {
         return result;
     }
 
-    query = QUERIES[IDX(QUERY_COUNT, docset->kind)];
+    query = docset->query_table->count_query;
 
     if (sqlite3_prepare_v2(docset->db, query, -1, &stmt, NULL) == SQLITE_OK &&
         sqlite3_step(stmt) == SQLITE_ROW) {
         result = sqlite3_column_int(stmt, 0);
     } else {
-        report_error(docset, "Query execution error");
+        error = 1;
     }
 
     sqlite3_finalize(stmt);
+
+    if (error) report_error(docset, "Query execution error");
 
     return result;
 }
@@ -221,6 +255,20 @@ void docset_set_error_handler(DocSet *docset, docset_err_handler h, void *ctx)
     }
 }
 
+const char *docset_error_string(DocSetError err)
+{
+    switch (err) {
+    case DOCSET_OK: return NULL;
+    case DOCSET_BAD_CALL: return "Docset API usage error";
+    case DOCSET_NO_MEM: return "Memory allocation error";
+    case DOCSET_NO_INFO_FILE: return "File not found: " PLIST_FILE_NAME;
+    case DOCSET_BAD_XML: return PLIST_FILE_NAME ": Xml parse error";
+    case DOCSET_NO_DB: return "File not found: " DB_FILE_NAME;
+    case DOCSET_BAD_DB: return DB_FILE_NAME ": Database access error";
+    default: return "Unknown docset error";
+    }
+}
+
 const char *docset_kind_name(DocSetKind k)
 {
     if (DOCSET_KIND_DASH <= k && k <= DOCSET_KIND_ZDASH) {
@@ -231,7 +279,22 @@ const char *docset_kind_name(DocSetKind k)
 
 DocSetKind docset_kind(DocSet *docset)
 {
-    return docset->kind;
+    QueryTable *t;
+
+    if (docset == NULL) {
+        return DOCSET_KIND_UNKNOWN;
+    }
+
+    t = docset->query_table;
+
+    if (t == &dash_query_table) {
+        return DOCSET_KIND_DASH;
+    }
+    if (t == &zdash_query_table) {
+        return DOCSET_KIND_ZDASH;
+    }
+
+    return DOCSET_KIND_UNKNOWN;
 }
 
 DocSetCursor *docset_find(DocSet *docset, const char *input)
@@ -239,14 +302,16 @@ DocSetCursor *docset_find(DocSet *docset, const char *input)
     DocSetCursor *cursor;
     const char *query;
 
-    if (!docset || !input)
+    if (!docset || !input) {
         return NULL;
+    }
 
-    query = QUERIES[IDX(QUERY_NAME_LIKE_SEARCH, docset->kind)];
+    query = docset->query_table->name_like_query;
     cursor = cursor_for_query(docset, query, -1);
 
-    if (!cursor)
+    if (!cursor) {
         return NULL;
+    }
 
     sqlite3_bind_text(cursor->stmt, 1, input, -1, SQLITE_TRANSIENT);
 
@@ -261,7 +326,7 @@ DocSetCursor *docset_list_entries(DocSet *docset)
         return NULL;
     }
 
-    query = QUERIES[IDX(QUERY_FULL_SCAN, docset->kind)];
+    query = docset->query_table->all_query;
     return cursor_for_query(docset, query, -1);
 }
 
@@ -269,8 +334,9 @@ int docset_cursor_dispose(DocSetCursor *cursor)
 {
     int ret_code;
 
-    if (!cursor)
+    if (!cursor) {
         return 0;
+    }
 
     ret_code = sqlite3_finalize(cursor->stmt);
     dispose_entry(&cursor->entry);
@@ -289,8 +355,9 @@ DocSetEntry *docset_cursor_entry(DocSetCursor *cursor)
     DocSetEntry *e;
     sqlite3_stmt *stmt;
 
-    if (!cursor)
+    if (!cursor) {
         return NULL;
+    }
 
     e = &cursor->entry;
     stmt = cursor->stmt;
@@ -331,6 +398,18 @@ const char *docset_entry_canonical_type(DocSetEntry *entry)
     return docset_canonical_type_name(type);
 }
 
+static int file_exists(const char *filename)
+{
+    /* Looks like the only ANSI-C compatible way
+     * to check file existence */
+    FILE *f = fopen(filename, "r");
+    if (f != NULL) {
+        fclose(f);
+        return 1;
+    }
+    return 0;
+}
+
 static int init_entry(DocSetEntry *e)
 {
     int ok = docset_sb_init(&e->name, BUF_INIT_SIZE) &
@@ -338,8 +417,9 @@ static int init_entry(DocSetEntry *e)
              docset_sb_init(&e->parent, BUF_INIT_SIZE) &
              docset_sb_init(&e->path, BUF_INIT_SIZE);
 
-    if (!ok)
+    if (!ok) {
         dispose_entry(e);
+    }
 
     return ok;
 }
@@ -373,23 +453,25 @@ static int parse_props(DocSet *docset, const char *path)
 
     result = docset_parse_properties(path, props, props + num_props);
 
-    if (is_dash)
-        docset->flags |= DOCSET_IS_DASH;
-    if (js_enabled)
-        docset->flags |= DOCSET_IS_JS_ENABLED;
+    if (is_dash) {
+        DOCSET_SET_FLAG(docset->flags, DOCSET_IS_DASH);
+    }
+    if (js_enabled) {
+        DOCSET_SET_FLAG(docset->flags, DOCSET_IS_JS_ENABLED);
+    }
 
     return result;
 }
 
-static int set_kind(DocSet *docset)
+static int set_query_table(DocSet *docset)
 {
     if (count_tables(docset->db, "searchIndex")) {
-        docset->kind = DOCSET_KIND_DASH;
+        docset->query_table = &dash_query_table;
         return 1;
     }
 
     if (count_tables(docset->db, "ZTOKEN")) {
-        docset->kind = DOCSET_KIND_ZDASH;
+        docset->query_table = &zdash_query_table;
         return 1;
     }
 
@@ -401,31 +483,28 @@ static DocSetCursor *cursor_for_query(DocSet *docset,
                                       int len)
 {
     sqlite3_stmt *stmt = NULL;
-    DocSetCursor *c = calloc(1, sizeof(*c));
+    DocSetCursor *c = (DocSetCursor *) calloc(1, sizeof(*c));
 
     if (!c) {
         report_no_mem(docset);
-        goto fail;
+        return NULL;
     }
 
     if (!init_entry(&c->entry)) {
+        free(c);
         report_no_mem(docset);
-        goto fail;
+        return NULL;
     }
 
     if (sqlite3_prepare_v2(docset->db, query, len, &stmt, NULL) != SQLITE_OK) {
+        docset_cursor_dispose(c);
         report_error(docset, "Can't prepare a query");
-        goto fail;
+        return NULL;
     }
 
     c->docset = docset;
     c->stmt = stmt;
     return c;
-
-fail:
-    sqlite3_finalize(stmt);
-    free(c);
-    return NULL;
 }
 
 static void report_error(DocSet *docset, const char *msg)
@@ -437,7 +516,7 @@ static void report_error(DocSet *docset, const char *msg)
 
 static void report_no_mem(DocSet *docset)
 {
-    report_error(docset, "Memory allocation error");
+    report_error(docset, docset_error_string(DOCSET_NO_MEM));
 }
 
 static int count_tables(sqlite3 *db, const char *table)

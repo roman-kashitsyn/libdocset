@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: Roman Kashitsyn <roman.kashitsyn@gmail.com>
 Build-Depends:
  cmake (>= 2.8),
- debhelper (>= 9),
+ debhelper (>= 7),
  libsqlite3-dev,
  libxml2-dev
 Standards-Version: 3.9.4
@@ -25,3 +25,19 @@ Depends: libdocset0 (= ${source:Version}),
   ${shlibs:Depends}, ${misc:Depends}
 Description: Library to read docset bundles
  Development files package.
+
+Package: libdocset++0
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Library to read docset bundles - C++ bindings
+ C++ bindings for libdocset.
+
+Package: libdocset++0-dev
+Section: libdevel
+Architecture: any
+Depends: libdocset++0 (= ${source:Version}),
+  ${shlibs:Depends}, ${misc:Depends}
+Description: C++ bindings for libdocset - development files
+ Development files package.
+
+
