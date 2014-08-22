@@ -8,17 +8,18 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define DASH_BASE_QUERY                                                        \
-    "select name, type, null as parent, path from searchIndex"
+#define DASH_BASE_QUERY                                             \
+    "select id, name, type, null as parent, path from searchIndex"
 
-#define ZDASH_BASE_QUERY                                                       \
-    "select t.ztokenname as name "                                             \
-    ", tt.ztypename as type "                                                  \
-    ", null as parent "                                                        \
-    ", coalesce(tf.zpath || '#' || tm.zanchor, tf.zpath) as path "             \
-    "from ztoken t "                                                           \
-    "join ztokentype tt on (t.ztokentype=tt.z_pk) "                            \
-    "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "           \
+#define ZDASH_BASE_QUERY                                                \
+    "select t.z_pk as id"                                               \
+    ", t.ztokenname as name"                                            \
+    ", tt.ztypename as type"                                            \
+    ", null as parent"                                                  \
+    ", coalesce(tf.zpath || '#' || tm.zanchor, tf.zpath) as path "      \
+    "from ztoken t "                                                    \
+    "join ztokentype tt on (t.ztokentype=tt.z_pk) "                     \
+    "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "    \
     "join zfilepath tf on (tm.zfile=tf.z_pk)"
 
 #define COLUMN_ORDERING " order by name asc, type asc"
@@ -75,6 +76,7 @@ struct DocSet
 
 struct DocSetEntry
 {
+    DocSetEntryId id;
     DocSetStringBuf name;
     DocSetStringBuf type;
     DocSetStringBuf parent;
@@ -354,6 +356,7 @@ DocSetEntry *docset_cursor_entry(DocSetCursor *cursor)
 {
     DocSetEntry *e;
     sqlite3_stmt *stmt;
+    int column_index = 0;
 
     if (!cursor) {
         return NULL;
@@ -362,12 +365,18 @@ DocSetEntry *docset_cursor_entry(DocSetCursor *cursor)
     e = &cursor->entry;
     stmt = cursor->stmt;
 
-    assign_buffer_col(&e->name, stmt, 0);
-    assign_buffer_col(&e->type, stmt, 1);
-    assign_buffer_col(&e->parent, stmt, 2);
-    assign_buffer_col(&e->path, stmt, 3);
+    e->id = sqlite3_column_int(stmt, column_index++);
+    assign_buffer_col(&e->name, stmt, column_index++);
+    assign_buffer_col(&e->type, stmt, column_index++);
+    assign_buffer_col(&e->parent, stmt, column_index++);
+    assign_buffer_col(&e->path, stmt, column_index++);
 
     return e;
+}
+
+DocSetEntryId docset_entry_id(DocSetEntry *entry)
+{
+    return entry->id;
 }
 
 const char *docset_entry_name(DocSetEntry *entry)

@@ -38,6 +38,10 @@ public:
 class entry
 {
 public:
+    typedef ::DocSetEntryId id_type;
+
+    id_type id() const { return id_; }
+
     std::string name() const { return name_; }
 
     std::string path() const { return path_; }
@@ -59,6 +63,7 @@ private:
     void assign_raw_entry(::DocSetEntry *);
 
 private:
+    id_type id_;
     std::string name_;
     std::string path_;
     std::string type_name_;

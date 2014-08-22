@@ -70,6 +70,7 @@ bool entry::operator==(const entry &rhs) const
 
 void entry::assign_raw_entry(::DocSetEntry *e)
 {
+    id_ = ::docset_entry_id(e);
     name_.assign(::docset_entry_name(e));
     path_.assign(::docset_entry_path(e));
     canonical_type_ = ::docset_entry_type(e);

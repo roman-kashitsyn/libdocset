@@ -142,6 +142,11 @@ typedef enum {
 typedef struct DocSet DocSet;
 
 /**
+ * @brief DocSet entry identifier type.
+ */
+typedef int DocSetEntryId;
+
+/**
  * @brief Abstract data type describing docset entry.
  */
 typedef struct DocSetEntry DocSetEntry;
@@ -291,6 +296,12 @@ docset_cursor_entry(DocSetCursor *cursor);
 
 /** @defgroup entry Entry manipulation functions
  *  @{ */
+
+/**
+ * @brief Returns unique entry identifier.
+ */
+DocSetEntryId
+docset_entry_id(DocSetEntry *entry);
 
 /**
  * @brief Returns current entry name.
