@@ -1,3 +1,10 @@
+libdocset0 (0.3.1ubuntu1) trusty; urgency=low
+
+  * Add docset_entry_id function
+  * Fix bug in docset::doc_set(std::string) constructor
+
+ -- Roman Kashitsyn <lifted@yandex-team.ru>  Sun, 24 Aug 2014 00:28:05 +0400
+
 libdocset0 (0.2.0) trusty; urgency=low
 
   * Add C++ bindings
