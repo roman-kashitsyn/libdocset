@@ -13,15 +13,13 @@ error::error(const char *text) throw()
 // Docset
 
 doc_set::doc_set(const char *dirname)
-    : basedir_(dirname)
-{
-    init(dirname);
-}
+    : doc_set(std::string(dirname))
+{}
 
 doc_set::doc_set(std::string dirname)
     : basedir_(std::move(dirname))
 {
-    init(dirname.c_str());
+    init(basedir_.c_str());
 }
 
 std::size_t doc_set::count() const
