@@ -137,8 +137,15 @@ public:
     /// @brief Returns the name of a docset.
     const char *name() const;
 
+    /// @brief Returns the platform family of a docset.
+    const char *platform_family() const;
+
+    /// @brief Returns the bundle identifier of a docset.
+    const char *bundle_identifier() const;
+
     /// @brief Returns base docset directory.
     std::string basedir() const { return basedir_; }
+
 
     /// @brief Returns iterator pointing to the first entry in a docset.
     iterator begin() const;

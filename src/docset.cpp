@@ -32,6 +32,16 @@ const char *doc_set::name() const
     return ::docset_name(docset_.get());
 }
 
+const char *doc_set::platform_family() const
+{
+    return ::docset_platform_family(docset_.get());
+}
+
+const char *doc_set::bundle_identifier() const
+{
+    return ::docset_bundle_identifier(docset_.get());
+}
+
 iterator doc_set::begin() const
 {
     return iterator(::docset_list_entries(docset_.get()));
