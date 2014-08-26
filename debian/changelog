@@ -1,3 +1,9 @@
+libdocset0 (0.3.2ubuntu1) trusty; urgency=low
+
+  * Add missing docset accessors to c++ bindings
+
+ -- Roman Kashitsyn <lifted@yandex-team.ru>  Tue, 26 Aug 2014 22:44:29 +0400
+
 libdocset0 (0.3.1ubuntu1) trusty; urgency=low
 
   * Add docset_entry_id function
