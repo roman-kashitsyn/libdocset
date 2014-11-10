@@ -22,7 +22,7 @@
     "join ztokenmetainformation tm on (t.zmetainformation=tm.z_pk) "    \
     "join zfilepath tf on (tm.zfile=tf.z_pk)"
 
-#define COLUMN_ORDERING " order by name asc, type asc"
+#define COLUMN_ORDERING " order by id"
 
 #define BUF_INIT_SIZE 100
 
@@ -44,20 +44,23 @@ typedef struct QueryTable
     const char *all_query;
     const char *name_like_query;
     const char *count_query;
+    const char *query_base;
 } QueryTable;
 
 static QueryTable dash_query_table =
 {
     DASH_BASE_QUERY COLUMN_ORDERING,
     DASH_BASE_QUERY " where name like ? " COLUMN_ORDERING,
-    "select count(*) from searchIndex"
+    "select count(*) from searchIndex",
+    DASH_BASE_QUERY
 };
 
 static QueryTable zdash_query_table =
 {
     ZDASH_BASE_QUERY COLUMN_ORDERING,
     ZDASH_BASE_QUERY " where name like ? " COLUMN_ORDERING,
-    "select count(*) from ztoken"
+    "select count(*) from ztoken",
+    ZDASH_BASE_QUERY
 };
 
 struct DocSet
@@ -267,6 +270,7 @@ const char *docset_error_string(DocSetError err)
     case DOCSET_BAD_XML: return PLIST_FILE_NAME ": Xml parse error";
     case DOCSET_NO_DB: return "File not found: " DB_FILE_NAME;
     case DOCSET_BAD_DB: return DB_FILE_NAME ": Database access error";
+    case DOCSET_TOO_MANY_ARGS: return "Too many arguments";
     default: return "Unknown docset error";
     }
 }
@@ -299,12 +303,12 @@ DocSetKind docset_kind(DocSet *docset)
     return DOCSET_KIND_UNKNOWN;
 }
 
-DocSetCursor *docset_find(DocSet *docset, const char *input)
+DocSetCursor *docset_find(DocSet *docset, const char *pattern)
 {
     DocSetCursor *cursor;
     const char *query;
 
-    if (!docset || !input) {
+    if (!docset || !pattern) {
         return NULL;
     }
 
@@ -315,9 +319,57 @@ DocSetCursor *docset_find(DocSet *docset, const char *input)
         return NULL;
     }
 
-    sqlite3_bind_text(cursor->stmt, 1, input, -1, SQLITE_TRANSIENT);
+    sqlite3_bind_text(cursor->stmt, 1, pattern, -1, SQLITE_TRANSIENT);
 
     return cursor;
+}
+
+DocSetCursor *docset_find_by_ids(DocSet *docset,
+                                 const DocSetEntryId *ids,
+                                 unsigned num_ids)
+{
+    DocSetCursor *cursor = NULL;
+    DocSetStringBuf buf;
+    const char *query_base;
+    size_t n;
+    unsigned i;
+
+    if (!docset || !ids || num_ids < 1) {
+        report_error(docset, docset_error_string(DOCSET_BAD_CALL));
+        return NULL;
+    }
+    if (num_ids > (unsigned) DOCSET_MAX_IDS) {
+        report_error(docset, docset_error_string(DOCSET_TOO_MANY_ARGS));
+        return NULL;
+    }
+
+    query_base = docset->query_table->query_base;
+    n = strlen(query_base);
+
+    docset_sb_init(&buf, n + num_ids * 5);
+    docset_sb_assign(&buf, query_base, n);
+
+    docset_sb_append(&buf, " where id in (?");
+    for (i = 1; i < num_ids; i++) {
+        docset_sb_append(&buf, ", ?");
+    }
+    docset_sb_append(&buf, ") order by id");
+
+    cursor = cursor_for_query(docset, buf.data, -1);
+    if (!cursor) {
+        goto error;
+    }
+
+    for (i = 1; i <= num_ids; i++) {
+        sqlite3_bind_int(cursor->stmt, (int)i, ids[i - 1]);
+    }
+
+    return cursor;
+
+error:
+    docset_sb_destroy(&buf);
+    docset_cursor_dispose(cursor);
+    return NULL;
 }
 
 DocSetCursor *docset_list_entries(DocSet *docset)
@@ -518,7 +570,7 @@ static DocSetCursor *cursor_for_query(DocSet *docset,
 
 static void report_error(DocSet *docset, const char *msg)
 {
-    if (docset->err_handler) {
+    if (docset && docset->err_handler) {
         docset->err_handler(docset->err_context, msg);
     }
 }

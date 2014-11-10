@@ -49,12 +49,17 @@ iterator doc_set::begin() const
 
 entry_range doc_set::find(const char *query) const
 {
-    return entry_range(docset_.get(), query);
+    return entry_range(docset_find(docset_.get(), query));
 }
 
-entry_range doc_set::find(std::string query) const
+entry_range doc_set::find(const std::string& query) const
 {
-    return entry_range(docset_.get(), std::move(query));
+    return entry_range(docset_find(docset_.get(), query.c_str()));
+}
+
+entry_range doc_set::find_by_ids(const std::vector<entry::id_type> &ids) const
+{
+    return entry_range(docset_find_by_ids(docset_.get(), &ids[0], ids.size()));
 }
 
 void doc_set::init(const char *dirname)
@@ -92,6 +97,12 @@ iterator::iterator(DocSetCursor *cursor)
     ++(*this);
 }
 
+iterator::iterator(const std::shared_ptr<DocSetCursor> &cursor)
+    : cursor_(cursor)
+{
+    ++(*this);
+}
+
 iterator &iterator::operator++()
 {
     if (::docset_cursor_step(cursor_.get())) {
@@ -114,14 +125,13 @@ bool iterator::operator==(const iterator &rhs) const
 
 // Entry range
 
-entry_range::entry_range(::DocSet *docset, std::string query)
-    : docset_(docset)
-    , query_(std::move(query))
+entry_range::entry_range(::DocSetCursor *cursor)
+    : cursor_(cursor, ::docset_cursor_dispose)
 {}
 
 iterator entry_range::begin() const
 {
-    return iterator(::docset_find(docset_, query_.c_str()));
+    return iterator(cursor_);
 }
 
 }

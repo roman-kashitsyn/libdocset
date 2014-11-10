@@ -42,13 +42,30 @@ docset_sb_assign(DocSetStringBuf *buf,
     return 1;
 }
 
+int
+docset_sb_append(DocSetStringBuf *buf,
+                 const char *data)
+{
+    size_t n = strlen(data);
+    size_t len = buf->size + n;
+
+    if (!docset_sb_reserve(buf, len + 1)) {
+        return 0;
+    }
+
+    memcpy(buf->data + buf->size, data, n);
+    buf->data[len + 1] = '\0';
+    buf->size = len;
+    return 1;
+}
+
 int docset_sb_reserve(DocSetStringBuf *buf,
                       size_t           size)
 {
     if (buf->capacity < size) {
         size_t capx2 = buf->capacity * 2;
         size_t new_cap = capx2 > size ? capx2 : size;
-        char * n = realloc(buf->data, new_cap);
+        char *n = realloc(buf->data, new_cap);
         if (!n) return 0;
         buf->capacity = new_cap;
         buf->data = n;

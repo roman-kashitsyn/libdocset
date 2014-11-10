@@ -22,6 +22,7 @@
  */
 #include <docset.h>
 #include <string>
+#include <vector>
 #include <iterator>
 #include <stdexcept>
 #include <memory>
@@ -72,14 +73,15 @@ private:
 
 /// @brief Iterator that traverses entries in a result set.
 ///
-/// Models forward iterator.
+/// Models input iterator.
 class iterator :
         public std::iterator<entry,
-                             std::forward_iterator_tag>
+                             std::input_iterator_tag>
 {
 public:
 
     iterator(DocSetCursor *cursor = nullptr);
+    iterator(const std::shared_ptr<DocSetCursor> &cursor);
 
     iterator &operator++();
 
@@ -105,11 +107,11 @@ private:
 
 /// @brief Represents query result set.
 ///
-/// It's is safe to traverse the result set multiple times.
+/// It's not safe to traverse the result set multiple times.
 class entry_range
 {
 public:
-    entry_range(::DocSet *docset, std::string query);
+    entry_range(::DocSetCursor *cursor);
 
     /// @brief Returns iterator pointing to the first entry
     /// in a result set.
@@ -120,8 +122,7 @@ public:
     iterator end() const { return iterator(); }
 
 private:
-    ::DocSet *docset_;
-    std::string query_;
+    std::shared_ptr<::DocSetCursor> cursor_;
 };
 
 /// @brief Represents a docset handle.
@@ -153,10 +154,12 @@ public:
     /// @brief Returns iterator pointing after the last entry in a docset.
     iterator end() const { return iterator(); }
 
-    /// @brief Returns range of entries matching the given query. 
+    /// @brief Returns range of entries matching the given query.
     entry_range find(const char *query) const;
 
-    entry_range find(std::string query) const;
+    entry_range find(const std::string &query) const;
+
+    entry_range find_by_ids(const std::vector<entry::id_type> &ids) const;
 
 private:
     void init(const char *);

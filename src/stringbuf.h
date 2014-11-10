@@ -49,6 +49,12 @@ docset_sb_assign(DocSetStringBuf *buf,
                  size_t           len);
 
 /**
+ * @brief Appends given zero-terminated string to a buffer.
+ */
+int
+docset_sb_append(DocSetStringBuf *buf, const char *data);
+
+/**
  * @brief Ensures that a buffer could place at least len bytes in
  * total.
  */

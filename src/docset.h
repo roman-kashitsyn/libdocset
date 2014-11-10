@@ -62,7 +62,8 @@ typedef enum {
     DOCSET_NO_INFO_FILE,
     DOCSET_BAD_XML,
     DOCSET_NO_DB,
-    DOCSET_BAD_DB
+    DOCSET_BAD_DB,
+    DOCSET_TOO_MANY_ARGS
 } DocSetError;
 
 /**
@@ -135,6 +136,8 @@ typedef enum {
     DOCSET_TYPE_VARIABLE = 59,
     DOCSET_TYPE_LAST = DOCSET_TYPE_VARIABLE
 } DocSetEntryType;
+
+enum { DOCSET_MAX_IDS = 999 };
 
 /**
  * @brief Abstract data type representing docset.
@@ -258,11 +261,28 @@ docset_flags(DocSet *docset);
  */
 
 /**
- * @brief Starts substring search on docset.
+ * @brief Returns cursor that traverses entries matching given @p
+ * pattern.
  */
 DocSetCursor *
 docset_find(DocSet     *docset,
-            const char *input);
+            const char *pattern);
+
+/**
+ * @brief Returns cursor that traverses entries with specified
+ * @p ids.
+ *
+ * @param ids identifiers of entries to enumerate
+ * @param num_ids size of the @p ids vector
+ * @return cursor that enumerates entries with specified ids, ordered by
+ * entry id (asc).
+ *
+ * @note @p num_ids must not exceed @c DOCSET_MAX_IDS.
+ */
+DocSetCursor *
+docset_find_by_ids(DocSet *docset,
+                   const DocSetEntryId *ids,
+                   unsigned num_ids);
 
 /**
  * @brief Returns all the docset entries.
